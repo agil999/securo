@@ -1,6 +1,9 @@
 from functools import lru_cache
 from urllib.parse import urlparse
 
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +14,30 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/securo"
+        @field_validator("database_url")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if not value:
+            return value
+
+        parsed = urlparse(value)
+
+        scheme = parsed.scheme
+        if scheme == "postgres":
+            scheme = "postgresql+asyncpg"
+        elif scheme == "postgresql":
+            scheme = "postgresql+asyncpg"
+
+        query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+
+        if query.pop("sslmode", None) == "require":
+            query["ssl"] = "require"
+
+        hostname = parsed.hostname or ""
+        if "supabase" in hostname and "prepared_statement_cache_size" not in query:
+            query["prepared_statement_cache_size"] = "0"
+
+        return urlunparse(parsed._replace(scheme=scheme, query=urlencode(query)))
 
     # Auth
     secret_key: str = "change-me-in-production"
