@@ -1,1 +1,1 @@
-securo-backend @ file:./backend
+backend @ file:./backend
