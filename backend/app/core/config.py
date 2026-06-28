@@ -1,6 +1,4 @@
 from functools import lru_cache
-from urllib.parse import urlparse
-
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from pydantic import field_validator
@@ -14,7 +12,8 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/securo"
-        @field_validator("database_url")
+
+    @field_validator("database_url")
     @classmethod
     def normalize_database_url(cls, value: str) -> str:
         if not value:
@@ -23,9 +22,7 @@ class Settings(BaseSettings):
         parsed = urlparse(value)
 
         scheme = parsed.scheme
-        if scheme == "postgres":
-            scheme = "postgresql+asyncpg"
-        elif scheme == "postgresql":
+        if scheme in {"postgres", "postgresql"}:
             scheme = "postgresql+asyncpg"
 
         query = dict(parse_qsl(parsed.query, keep_blank_values=True))
@@ -40,7 +37,7 @@ class Settings(BaseSettings):
         return urlunparse(parsed._replace(scheme=scheme, query=urlencode(query)))
 
     # Auth
-    secret_key: str = "change-me-in-production"
+secret_key: str = "change-me-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24  # 24 hours
 
